@@ -1,0 +1,5 @@
+telethon
+apscheduler
+pillow
+pytz
+openai==0.28
