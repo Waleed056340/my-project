@@ -138,7 +138,13 @@ def add_image_watermark(base_image_path, watermark_image_path, output_path, opac
 @client.on(events.NewMessage(chats=source_channel))
 async def forward_handler(event):
     try:
+        # تجاهل الرسائل غير المدعومة
+        if not event.text and not event.photo:
+            print("⛔ تم تجاهل رسالة غير مدعومة (ليست نصًا أو صورة).")
+            return
+
         original_text = event.text or ""
+
         if event.photo:
             file_path = await event.download_media()
             output_path = "watermarked.jpg"
@@ -153,8 +159,10 @@ async def forward_handler(event):
             modified_caption = await rewrite_text_with_chatgpt(original_text)
             await client.send_message(destination_channel, modified_caption, parse_mode='html')
             await client.send_message(destination_channel, "───  BOT_TOPSPX1  ───")
+
     except Exception as e:
         print(f"❌ خطأ أثناء التعامل مع الرسالة: {e}")
+
 
 daily_message = """(بسم الله الرحمن الرحيم)
 

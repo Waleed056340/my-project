@@ -1,4 +1,4 @@
-telethon==1.40.0
+git+https://github.com/LonamiWebs/Telethon.git
 apscheduler
 pillow
 pytz
