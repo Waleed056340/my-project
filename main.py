@@ -7,21 +7,20 @@ import re
 from datetime import datetime
 from pytz import timezone
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-
-#openai.api_key = "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"
-
-api_id =  25671729
-
+api_id = 25671729
 api_hash = '7a99f52526cd483c1d5abf27069d5e10'
 
-source_channel = 'https://t.me/OPTION_Xn'
+source_channel = 'https://t.me/RITKCHART'
 destination_channel = 'https://t.me/BOT_TOPSPX1'
 
 client = TelegramClient('forwarder_session', api_id, api_hash)
 
 def clean_text(text):
+    text = re.sub(r'\b100\$', '3$ فقط', text)
+    text = re.sub(r'القناة\s*لا\s*تتحمل\s*أي\s*مسؤولية\s*✨?', '', text, flags=re.IGNORECASE)
     text = re.sub(r'\+?100\$', 'أكثر من 25٪', text)
     text = re.sub(r'⚠ تنبيه هام:', '⚠ تذكر:', text)
     text = re.sub(r'حسب سياسة القناة.*', '', text)
@@ -68,15 +67,29 @@ def extract_strike_price(text):
 
 async def rewrite_text_with_chatgpt(text):
     try:
+        # ✅ إذا كانت الرسالة عبارة فقط عن "القناة لا تتحمل أي مسؤولية"
+        if text.strip() == "القناة لا تتحمل أي مسؤولية":
+            return ""
+
+        # ✅ استبدال رسالة مجموعة ريتك تلقائيًا برسالة ثابتة دون تمريرها إلى GPT
+        if "تم انشاء مجموعة ريتك" in text and "ما يتم طرحه في هذه القناة" in text:
+            return "✨ بسم الله توكلنا على الله ✨🕌\n\nنبدأ باسم الله، ونتوكل عليه في كل أمر"
+
         if "BOT_TOPSPX1" in text or "بسم الله الرحمن الرحيم" in text:
             return text
 
         text = text.replace("🔻 النوع: Put", "🔻 النوع: Put / بيع")
         text = text.replace("🔻 النوع: Call", "🔻 النوع: Call / شراء")
+        text = text.replace("القناة لا تتحمل أي مسؤولية ✨", ".")
+        text = text.replace("القناة لا تتحمل أي مسؤولية", ".")
+
         has_opton = "OPTON\u00a0X" in text
         text = text.replace("OPTON\u00a0X", "").replace("🔥", "").strip()
+
         date_info = extract_date_info(text)
         cleaned = clean_text(text)
+
+        # حذف معلومات قديمة مكررة
         cleaned = re.sub(r'🔻 نوع الصفقة:.*', '', cleaned)
         cleaned = re.sub(r'🔻 نوع العقد:.*', '', cleaned)
         cleaned = re.sub(r'(📆)?\s*تاريخ الصفقة:.*', '', cleaned)
@@ -90,6 +103,7 @@ async def rewrite_text_with_chatgpt(text):
             cleaned = re.split(r"• الهدف الثاني:.*", cleaned)[0].strip()
             cleaned += "\n• الهدف الثاني: يتم تنويه عنه لاحقًا\nBOT_TOPSPX1"
 
+        # ✅ إرسال النص إلى ChatGPT لإعادة الصياغة
         response = await openai.ChatCompletion.acreate(
             model="gpt-4",
             messages=[
@@ -112,8 +126,7 @@ async def rewrite_text_with_chatgpt(text):
             strike_line = f"🔵 <b>Strike : {strike_number}</b>\n"
             rewritten = strike_line + rewritten
 
-        final_text = rewritten.strip()
-        return final_text
+        return rewritten.strip()
 
     except Exception as e:
         print(f"❌ خطأ أثناء الاتصال بـ ChatGPT: {e}")
@@ -133,21 +146,25 @@ def add_image_watermark(base_image_path, watermark_image_path, output_path, opac
     transparent_layer = Image.new("RGBA", base_image.size, (0, 0, 0, 0))
     transparent_layer.paste(watermark, (x, y), watermark)
     combined = Image.alpha_composite(base_image, transparent_layer)
-    combined.convert("RGB").save(output_path, "JPEG")
+    combined.save(output_path, "PNG")
+
 
 @client.on(events.NewMessage(chats=source_channel))
 async def forward_handler(event):
     try:
-        # تجاهل الرسائل غير المدعومة
         if not event.text and not event.photo:
             print("⛔ تم تجاهل رسالة غير مدعومة (ليست نصًا أو صورة).")
             return
 
         original_text = event.text or ""
 
+        if re.search(r'https?://\S+', original_text):
+            print("⛔ حذف رسالة تحتوي على لينك.")
+            return
+
         if event.photo:
             file_path = await event.download_media()
-            output_path = "watermarked.jpg"
+            output_path = "watermarked.png"
             watermark_path = "watermark.png"
             caption = await rewrite_text_with_chatgpt(original_text) if original_text.strip() else ""
             add_image_watermark(file_path, watermark_path, output_path)
@@ -163,7 +180,6 @@ async def forward_handler(event):
     except Exception as e:
         print(f"❌ خطأ أثناء التعامل مع الرسالة: {e}")
 
-
 daily_message = """(بسم الله الرحمن الرحيم)
 
 🤖 نظام إدارة مجموعة BOT_TOPSPX1
@@ -175,7 +191,6 @@ daily_message = """(بسم الله الرحمن الرحيم)
 🔹 اتخاذ القرارات الاستثمارية المثلى
 
 📊 هدفنا: تمكين المتداول من اتخاذ قرارات مبنية على بيانات وتحليل احترافي
-(بسم الله الرحمن الرحيم)
 
 ⚙ آلية اختيار العقود وتنفيذ الصفقات
 اختيار العقد الأنسب يتم عبر تحليل شامل لـ:
@@ -186,9 +201,8 @@ daily_message = """(بسم الله الرحمن الرحيم)
 قواعد تنفيذ الصفقة:
     • ✅ يتم طرح العقد عند مستوى دخول محسوب مسبقًا بدقة.
     • ⛔ يُمنع الدخول إذا ارتفع السعر أكثر من 20 دولار عن سعر الطرح ومحاولة إسراع في الدخول عند طرح العقد
-    • 🛑 يتم تحديد مستوى وقف الخسارة بوضوح على الشارت قبل أي تنفيذ.
 
-استراتيجية الخروج:
+استراتيجية الخروج من الصفقة:
     • 🎯 هدفنا تحقيق ربح 60 دولار أي 15٪ إلى 20٪ لتضمن الربح وتنمي محفظتك والاستمرار بقرارك، ويتم توضيح إذا هناك فرصة قوية لعقد في ارتفاع واستمرار
     • عند دخولك بأكثر من عقد يُنصح بالخروج إذا تم ربح 15‎% إلى 20‎%‎ من قيمة كل عقد
 
@@ -212,6 +226,14 @@ daily_message = """(بسم الله الرحمن الرحيم)
     • 🎓 هذه المجموعة تُستخدم لأغراض تعليمية فقط عبر الحسابات التجريبية.
     • 🧾 المعلومات المعروضة ليست توصيات.
     • ⚠ التداول يتم على مسؤوليتك الشخصية.
+
+💎 الرسالة الجوهرية
+
+“في عالم التداول، الروبوت هو الخريطة،
+لكن القبطان الحقيقي هو قراراتك وانضباطك.”
+✨ استثمر في المعرفة، تكن الأرباح حليفك.
+ 
+⚖ استراتيجية ذكية + انضباط صارم = نجاح مستدام
 """
 
 scheduler = AsyncIOScheduler(timezone="Asia/Riyadh")
