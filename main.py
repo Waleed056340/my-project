@@ -12,7 +12,7 @@ api_id = 23738221
 api_hash = 'db2b1d85e692194967e53f78310e3ad1'
 
 source_channel = 'https://t.me/RITKCHART'
-destination_channel = 'https://t.me/+XZ_iShy7awhkMGFk'
+destination_channel = 'https://t.me/BOT_TOPSPX0'
 
 client = TelegramClient('forwarder_session', api_id, api_hash)
 
