@@ -7,6 +7,8 @@ import re
 from datetime import datetime
 from pytz import timezone
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+import io
+
 openai.api_key = os.getenv("OPENAI_API_KEY").strip()
 api_id = 23738221
 api_hash = 'db2b1d85e692194967e53f78310e3ad1'
@@ -16,8 +18,26 @@ destination_channel = 'https://t.me/BOT_TOPSPX0'
 
 client = TelegramClient('forwarder_session', api_id, api_hash)
 
+social_media_texts = [
+    "لمتابعتنا علي برامج التواصل الاجتماعي",
+    "x.com/ritkchart",
+    "tiktok.com/@ritkchart",
+    "snapchat.com/@farisb3x"
+]
+
+REPLACEMENT_TEXT = """دخوووول سريع 🚀
+💸 ربح محتمل يبدأ من 30$ وأكثر
+🧠 لا تطمع… 
+📈 ارفع وقفك دائمًا
+
+📊 تحليل فني دقيق وتنفيذ فوري
+
+⚠ تنبيه مهم:
+📌 قرار الدخول أو الخروج مسؤوليتك الشخصية
+⛔ القناة غير مسؤولة عن أي نتائج مالية"""
+
 def clean_text(text):
-    text = re.sub(r'\b100\$', '3$ فقط', text)
+    text = re.sub(r'\b100\$', '30$ فقط', text)
     text = re.sub(r'القناة\s*لا\s*تتحمل\s*أي\s*مسؤولية\s*✨?', '', text, flags=re.IGNORECASE)
     text = re.sub(r'\+?100\$', 'أكثر من 25٪', text)
     text = re.sub(r'⚠ تنبيه هام:', '⚠ تذكر:', text)
@@ -65,11 +85,12 @@ def extract_strike_price(text):
 
 async def rewrite_text_with_chatgpt(text):
     try:
-        # ✅ إذا كانت الرسالة عبارة فقط عن "القناة لا تتحمل أي مسؤولية"
         if text.strip() == "القناة لا تتحمل أي مسؤولية":
             return ""
 
-        # ✅ استبدال رسالة مجموعة ريتك تلقائيًا برسالة ثابتة دون تمريرها إلى GPT
+        if text.strip().startswith("فرصة دخول بوت"):
+            return REPLACEMENT_TEXT
+
         if "تم انشاء مجموعة ريتك" in text and "ما يتم طرحه في هذه القناة" in text:
             return "✨ بسم الله توكلنا على الله ✨🕌\n\nنبدأ باسم الله، ونتوكل عليه في كل أمر"
 
@@ -87,7 +108,6 @@ async def rewrite_text_with_chatgpt(text):
         date_info = extract_date_info(text)
         cleaned = clean_text(text)
 
-        # حذف معلومات قديمة مكررة
         cleaned = re.sub(r'🔻 نوع الصفقة:.*', '', cleaned)
         cleaned = re.sub(r'🔻 نوع العقد:.*', '', cleaned)
         cleaned = re.sub(r'(📆)?\s*تاريخ الصفقة:.*', '', cleaned)
@@ -101,13 +121,12 @@ async def rewrite_text_with_chatgpt(text):
             cleaned = re.split(r"• الهدف الثاني:.*", cleaned)[0].strip()
             cleaned += "\n• الهدف الثاني: يتم تنويه عنه لاحقًا\nBOT_TOPSPX1"
 
-        # ✅ إرسال النص إلى ChatGPT لإعادة الصياغة
         response = await openai.ChatCompletion.acreate(
             model="gpt-4",
             messages=[
                 {
                     "role": "system",
-                    "content": "أعد صياغة النص بأسلوب محلل مالي محترف يدير قناة موثوقة على تيليجرام. اجعل الصياغة مقنعة، احترافية، جذابة ومختصرة، مع الحفاظ الكامل على الأرقام والتنسيق كما هي. إذا كان النص يحتوي على أكثر من جملة، اجعل الناتج في جملة واحدة فقط. وإذا كان النص عبارة عن جملة واحدة فقط، فأعد صياغتها بأساليب مختلفة في كل مرة لتفادي التكرار. في كل الحالات، يجب أن تبدأ الجملة برمز تعبيري مناسب يعكس مضمونها ويجعلها بصريًا جذابة."
+                   "content": "أعد صياغة النص بأسلوب محلل مالي محترف يدير قناة موثوقة على تيليجرام. اجعل الصياغة مقنعة، احترافية، جذابة ومختصرة، مع الحفاظ الكامل على الأرقام والتنسيق كما هي. إذا كان النص يحتوي على أكثر من جملة، اجعل الناتج في جملة واحدة فقط. وإذا كان النص عبارة عن جملة واحدة فقط، فأعد صياغتها بأساليب مختلفة في كل مرة لتفادي التكرار. في كل الحالات، يجب أن تبدأ الجملة برمز تعبيري مناسب يعكس مضمونها ويجعلها بصريًا جذابة."
                 },
                 {"role": "user", "content": cleaned.strip()}
             ],
@@ -130,28 +149,36 @@ async def rewrite_text_with_chatgpt(text):
         print(f"❌ خطأ أثناء الاتصال بـ ChatGPT: {e}")
         return text
 
-def add_image_watermark(base_image_path, watermark_image_path, output_path, opacity=135):
+def add_image_watermark_to_memory(base_image_path, watermark_image_path, opacity=135):
     base_image = Image.open(base_image_path).convert("RGBA")
     watermark = Image.open(watermark_image_path).convert("RGBA")
+
     scale_factor = 0.75
     new_size = (int(base_image.width * scale_factor), int(base_image.height * scale_factor))
     watermark = watermark.resize(new_size, Image.Resampling.LANCZOS)
+
     alpha = watermark.getchannel("A")
     alpha = alpha.point(lambda p: int(p * (opacity / 255)))
     watermark.putalpha(alpha)
+
     x = (base_image.width - watermark.width) // 2
     y = (base_image.height - watermark.height) // 2
+
     transparent_layer = Image.new("RGBA", base_image.size, (0, 0, 0, 0))
     transparent_layer.paste(watermark, (x, y), watermark)
     combined = Image.alpha_composite(base_image, transparent_layer)
-    combined.save(output_path, "PNG")
 
+    byte_io = io.BytesIO()
+    combined.convert("RGB").save(byte_io, format='PNG')
+    byte_io.name = 'watermarked.png'
+    byte_io.seek(0)
+    return byte_io
 
 @client.on(events.NewMessage(chats=source_channel))
 async def forward_handler(event):
     try:
         if not event.text and not event.photo:
-            print("⛔ تم تجاهل رسالة غير مدعومة (ليست نصًا أو صورة).")
+            print("⛔ تم تجاهل رسالة غير مدعومة.")
             return
 
         original_text = event.text or ""
@@ -160,16 +187,18 @@ async def forward_handler(event):
             print("⛔ حذف رسالة تحتوي على لينك.")
             return
 
+        if any(forbidden.lower() in original_text.lower() for forbidden in social_media_texts):
+            print("⛔ حذف رسالة تحتوي على محتوى محظور.")
+            return
+
         if event.photo:
             file_path = await event.download_media()
-            output_path = "watermarked.png"
             watermark_path = "watermark.png"
             caption = await rewrite_text_with_chatgpt(original_text) if original_text.strip() else ""
-            add_image_watermark(file_path, watermark_path, output_path)
-            await client.send_file(destination_channel, output_path, caption=caption, parse_mode='html')
+            image_stream = add_image_watermark_to_memory(file_path, watermark_path)
+            await client.send_file(destination_channel, image_stream, caption=caption, parse_mode='html')
             await client.send_message(destination_channel, "───  BOT_TOPSPX1  ───")
             os.remove(file_path)
-            os.remove(output_path)
         else:
             modified_caption = await rewrite_text_with_chatgpt(original_text)
             await client.send_message(destination_channel, modified_caption, parse_mode='html')
@@ -178,7 +207,7 @@ async def forward_handler(event):
     except Exception as e:
         print(f"❌ خطأ أثناء التعامل مع الرسالة: {e}")
 
-daily_message = """(بسم الله الرحمن الرحيم)
+daily_message ="""(بسم الله الرحمن الرحيم)
 
 🤖 نظام إدارة مجموعة BOT_TOPSPX1
 
@@ -236,14 +265,14 @@ daily_message = """(بسم الله الرحمن الرحيم)
 
 scheduler = AsyncIOScheduler(timezone="Asia/Riyadh")
 
-@scheduler.scheduled_job('cron', hour=3, minute=00)
+@scheduler.scheduled_job('cron', hour=3, minute=0)
 async def send_daily_info():
     await client.send_message(destination_channel, daily_message)
 
 async def main():
     await client.connect()
     if not await client.is_user_authorized():
-        print("❌ الجلسة غير مصرح بها. قم بتسجيل الدخول يدويًا أولاً.")
+        print("❌ الجلسة غير مصرح بها.")
         return
     print("✅ البوت متصل بـ Telegram")
     scheduler.start()
