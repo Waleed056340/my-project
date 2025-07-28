@@ -1,6 +1,6 @@
 import openai
 from telethon import TelegramClient, events
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 import os
 import asyncio
 import re
@@ -25,16 +25,48 @@ social_media_texts = [
     "snapchat.com/@farisb3x"
 ]
 
+forbidden_texts = [
+    "ماهي مجموعة ريتك",
+    "تم إنشاء مجموعة ريتك",
+    "ما يتم طرحه في هذه القناة لا يعد توصية",
+    "تدار هذي المجموعة عن طريق بوت",
+    "ما يتم طرحه في هذه المجموعة يتم طرحه عن طريق البوت",
+    "يتم مشاركة جميع الصفقات المطروحة على حسابتنا",
+    "يتم تسجيل الصفقة رابحة اذا حققت ارتفاع 100$ أو أكثر",
+    "يتم تسجيل الصفقة خاسرة اذا لم تحقق ارتفاع 100$",
+    "النتائج المسجلة تكون نسبة للعقد الواحد",
+    "الادارة المالية اهم من معرفة كيفية الشراء والبيع",
+    "القناة مجانية ولفترة محدودة",
+    "ملاحظة مهمة",
+    "القناة لا تتحمل أي مسؤولية"
+]
+
+forbidden_full_block_texts = [
+    """ماهي مجموعة ريتك لطرح عقود SPX
+١:- تم إنشاء مجموعة ريتك لمشاركة العقود التي قد تحقق ربح بما يزيد عن $100
+1:- ما يتم طرحه في هذه القناة لا يعد توصية بالشراء أو البيع وإنما للتعليم وننصح بالتطبيق على حسابات تجريبية وليس بأموالك الحقيقية "
+/ :- تدار هذي المجموعة عن طريق بوت مبرمج على تحليل بيانات السوق كحجم السيولة والكميات واتجاه السوق ومقدار حركة العقود
+١:-ما يتم طرحه في هذه المجموعة يتم طرحه عن طريق البوت / :-يتم مشاركة جميع الصفقات المطروحة على حسابتنا في برامج التواصل الاجتماعي
+1:- يتم تسجيل الصفقة رابحة اذا حققت ارتفاع 100$ أو أكثر
+1:-يتم تسجيل الصفقة خاسرة اذا لم تحقق ارتفاع 100$ ويحتسب كامل المبلغ خسارة في النتائج
+/:-النتائج المسجلة تكون نسبة للعقد الواحد
+1 :-الادارة المالية اهم من معرفة كيفية الشراء والبيع وقد تختلف النتائج باختلاف كمية العقود و وقت البيع والشراء
+للتذكير
+القناة مجانية ولفترة محدودة ٦
+!! ملاحظة مهمة
+القناة لا تتحمل أي مسؤولية *"""
+]
+
 REPLACEMENT_TEXT = """دخوووول سريع 🚀
 💸 ربح محتمل يبدأ من 30$ وأكثر
-🧠 لا تطمع… 
+🧠 لا تطمع…
 📈 ارفع وقفك دائمًا
 
 📊 تحليل فني دقيق وتنفيذ فوري
 
 ⚠ تنبيه مهم:
 📌 قرار الدخول أو الخروج مسؤوليتك الشخصية
-⛔ القناة غير مسؤولة عن أي نتائج مالية"""
+⛔ القناة غير مسؤولة عن أي نتائج مالية"""
 
 def clean_text(text):
     text = re.sub(r'\b100\$', '30$ فقط', text)
@@ -85,48 +117,42 @@ def extract_strike_price(text):
 
 async def rewrite_text_with_chatgpt(text):
     try:
-        if text.strip() == "القناة لا تتحمل أي مسؤولية":
+        original = text.strip()
+
+        if original == "القناة لا تتحمل أي مسؤولية":
             return ""
 
-        if text.strip().startswith("فرصة دخول بوت"):
+        if original.startswith("فرصة دخول بوت"):
             return REPLACEMENT_TEXT
 
-        if "تم انشاء مجموعة ريتك" in text and "ما يتم طرحه في هذه القناة" in text:
-            return "✨ بسم الله توكلنا على الله ✨🕌\n\nنبدأ باسم الله، ونتوكل عليه في كل أمر"
+        if "تم تجهيز قائمة مراقبة لعقود بوت" in original and "لا يتم التنفيذ حتى يتم التنبيه من البوت" in original:
+            return """📋 تم تجهيز قائمة العقود بنجاح
 
-        if "BOT_TOPSPX1" in text or "بسم الله الرحمن الرحيم" in text:
+🚫 لا تدخل حتى يصدر تنبيه دخول سريع من البوت"""
+
+        if "جاري تجهيز قائمة لمراقبة العقود" in original:
+            return """🤖 البوت الذكي يُجهّز قائمة العقود حاليًا…
+
+🚫 لا تدخل حتى يصدر تنبيه دخول"""
+
+        if "تم انشاء مجموعة ريتك" in original and "ما يتم طرحه في هذه القناة" in original:
+            return "✨ بسم الله توكلنا على الله ✨🕌\n\nنبدأ باسم الله، ونتوكل عليه في كل أمر"
+
+        if "BOT_TOPSPX1" in original or "بسم الله الرحمن الرحيم" in original:
             return text
 
         text = text.replace("🔻 النوع: Put", "🔻 النوع: Put / بيع")
         text = text.replace("🔻 النوع: Call", "🔻 النوع: Call / شراء")
-        text = text.replace("القناة لا تتحمل أي مسؤولية ✨", ".")
-        text = text.replace("القناة لا تتحمل أي مسؤولية", ".")
-
-        has_opton = "OPTON\u00a0X" in text
-        text = text.replace("OPTON\u00a0X", "").replace("🔥", "").strip()
 
         date_info = extract_date_info(text)
         cleaned = clean_text(text)
-
-        cleaned = re.sub(r'🔻 نوع الصفقة:.*', '', cleaned)
-        cleaned = re.sub(r'🔻 نوع العقد:.*', '', cleaned)
-        cleaned = re.sub(r'(📆)?\s*تاريخ الصفقة:.*', '', cleaned)
-        cleaned = re.sub(r'(📆)?\s*تاريخها:.*', '', cleaned)
-        cleaned = re.sub(r'(📆)?\s*التاريخ:.*', '', cleaned)
-        cleaned = re.sub(r'⚠ تذكر:.*', '', cleaned)
-        cleaned = re.sub(r'⚠ تنبيه:.*?(⸻)?', '', cleaned, flags=re.DOTALL)
-        cleaned = cleaned.replace("⸻", "")
-
-        if "الهدف الثاني" in cleaned:
-            cleaned = re.split(r"• الهدف الثاني:.*", cleaned)[0].strip()
-            cleaned += "\n• الهدف الثاني: يتم تنويه عنه لاحقًا\nBOT_TOPSPX1"
 
         response = await openai.ChatCompletion.acreate(
             model="gpt-4",
             messages=[
                 {
                     "role": "system",
-                   "content": "أعد صياغة النص بأسلوب محلل مالي محترف يدير قناة موثوقة على تيليجرام. اجعل الصياغة مقنعة، احترافية، جذابة ومختصرة، مع الحفاظ الكامل على الأرقام والتنسيق كما هي. إذا كان النص يحتوي على أكثر من جملة، اجعل الناتج في جملة واحدة فقط. وإذا كان النص عبارة عن جملة واحدة فقط، فأعد صياغتها بأساليب مختلفة في كل مرة لتفادي التكرار. في كل الحالات، يجب أن تبدأ الجملة برمز تعبيري مناسب يعكس مضمونها ويجعلها بصريًا جذابة."
+                    "content": "أعد صياغة النص بأسلوب محلل مالي محترف يدير قناة موثوقة على تيليجرام. اجعل الصياغة مقنعة، احترافية، جذابة ومختصرة، مع الحفاظ الكامل على الأرقام والتنسيق كما هي. إذا كان النص يحتوي على أكثر من جملة، اجعل الناتج في جملة واحدة فقط. وإذا كان النص عبارة عن جملة واحدة فقط، فأعد صياغتها بأساليب مختلفة في كل مرة لتفادي التكرار. في كل الحالات، يجب أن تبدأ الجملة برمز تعبيري مناسب يعكس مضمونها ويجعلها بصريًا جذابة."
                 },
                 {"role": "user", "content": cleaned.strip()}
             ],
@@ -140,8 +166,7 @@ async def rewrite_text_with_chatgpt(text):
 
         strike_number = extract_strike_price(text)
         if strike_number:
-            strike_line = f"🔵 <b>Strike : {strike_number}</b>\n"
-            rewritten = strike_line + rewritten
+            rewritten = f"🔵 <b>Strike : {strike_number}</b>\n" + rewritten
 
         return rewritten.strip()
 
@@ -149,8 +174,26 @@ async def rewrite_text_with_chatgpt(text):
         print(f"❌ خطأ أثناء الاتصال بـ ChatGPT: {e}")
         return text
 
-def add_image_watermark_to_memory(base_image_path, watermark_image_path, opacity=135):
-    base_image = Image.open(base_image_path).convert("RGBA")
+def add_text_on_image(image_path, text="BOT_TOPSPX1"):
+    image = Image.open(image_path).convert("RGBA")
+    txt_layer = Image.new("RGBA", image.size, (255, 255, 255, 0))
+    draw = ImageDraw.Draw(txt_layer)
+    try:
+        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", size=56)
+    except:
+        font = ImageFont.load_default()
+    x = int(image.width * 0.72)
+    y = int(image.height * 0.45)
+    draw.text((x, y), text, font=font, fill=(255, 255, 255, 255))
+    combined = Image.alpha_composite(image, txt_layer)
+    byte_io = io.BytesIO()
+    combined.convert("RGB").save(byte_io, format='PNG')
+    byte_io.name = 'watermarked.png'
+    byte_io.seek(0)
+    return byte_io
+
+def add_image_watermark_to_memory(image_stream, watermark_image_path, opacity=135):
+    base_image = Image.open(image_stream).convert("RGBA")
     watermark = Image.open(watermark_image_path).convert("RGBA")
 
     scale_factor = 0.75
@@ -174,6 +217,7 @@ def add_image_watermark_to_memory(base_image_path, watermark_image_path, opacity
     byte_io.seek(0)
     return byte_io
 
+
 @client.on(events.NewMessage(chats=source_channel))
 async def forward_handler(event):
     try:
@@ -191,14 +235,31 @@ async def forward_handler(event):
             print("⛔ حذف رسالة تحتوي على محتوى محظور.")
             return
 
+        if any(phrase in original_text for phrase in forbidden_texts):
+            print("⛔ حذف رسالة تحتوي على محتوى توعوي غير مسموح.")
+            return
+
+        for full_text in forbidden_full_block_texts:
+            if full_text.replace(" ", "").replace("\n", "") in original_text.replace(" ", "").replace("\n", ""):
+                print("⛔ تم حذف رسالة تحتوي على المحتوى الكامل المحظور.")
+                return
+
         if event.photo:
-            file_path = await event.download_media()
-            watermark_path = "watermark.png"
-            caption = await rewrite_text_with_chatgpt(original_text) if original_text.strip() else ""
-            image_stream = add_image_watermark_to_memory(file_path, watermark_path)
-            await client.send_file(destination_channel, image_stream, caption=caption, parse_mode='html')
-            await client.send_message(destination_channel, "───  BOT_TOPSPX1  ───")
-            os.remove(file_path)
+
+          file_path = await event.download_media()
+          caption = await rewrite_text_with_chatgpt(original_text) if original_text.strip() else ""
+
+         
+          image_with_text = add_text_on_image(file_path)
+
+          
+          final_image = add_image_watermark_to_memory(image_with_text, "watermark.png")  
+          
+          await client.send_file(destination_channel, final_image, caption=caption, parse_mode='html')
+          await client.send_message(destination_channel, "───  BOT_TOPSPX1  ───")
+
+          os.remove(file_path)
+
         else:
             modified_caption = await rewrite_text_with_chatgpt(original_text)
             await client.send_message(destination_channel, modified_caption, parse_mode='html')
@@ -207,7 +268,7 @@ async def forward_handler(event):
     except Exception as e:
         print(f"❌ خطأ أثناء التعامل مع الرسالة: {e}")
 
-daily_message ="""(بسم الله الرحمن الرحيم)
+daily_message = """(بسم الله الرحمن الرحيم)
 
 🤖 نظام إدارة مجموعة BOT_TOPSPX1
 
@@ -259,7 +320,7 @@ daily_message ="""(بسم الله الرحمن الرحيم)
 “في عالم التداول، الروبوت هو الخريطة،
 لكن القبطان الحقيقي هو قراراتك وانضباطك.”
 ✨ استثمر في المعرفة، تكن الأرباح حليفك.
- 
+
 ⚖ استراتيجية ذكية + انضباط صارم = نجاح مستدام
 """
 
