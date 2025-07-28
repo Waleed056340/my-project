@@ -122,7 +122,8 @@ async def rewrite_text_with_chatgpt(text):
         if original == "القناة لا تتحمل أي مسؤولية":
             return ""
 
-        if original.startswith("فرصة دخول بوت"):
+        if original.startswith(("فرصة دخول كول", "فرصة دخول بوت")):
+
             return REPLACEMENT_TEXT
 
         if "تم تجهيز قائمة مراقبة لعقود بوت" in original and "لا يتم التنفيذ حتى يتم التنبيه من البوت" in original:
@@ -326,7 +327,7 @@ daily_message = """(بسم الله الرحمن الرحيم)
 
 scheduler = AsyncIOScheduler(timezone="Asia/Riyadh")
 
-@scheduler.scheduled_job('cron', hour=15, minute=20)
+@scheduler.scheduled_job('cron', hour=3, minute=0)
 async def send_daily_info():
     await client.send_message(destination_channel, daily_message)
 
