@@ -1,7 +1,6 @@
-git+https://github.com/LonamiWebs/Telethon.git
-apscheduler
+telethon
+openai
 pillow
-pytz
-openai==0.28
 pytesseract
-tesseract-ocr
+python-dotenv
+apscheduler
