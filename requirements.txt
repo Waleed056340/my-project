@@ -3,5 +3,3 @@ apscheduler
 pillow
 pytz
 openai==0.28
-pytesseract
-tesseract-ocr
