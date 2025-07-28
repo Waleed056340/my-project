@@ -326,7 +326,7 @@ daily_message = """(بسم الله الرحمن الرحيم)
 
 scheduler = AsyncIOScheduler(timezone="Asia/Riyadh")
 
-@scheduler.scheduled_job('cron', hour=3, minute=0)
+@scheduler.scheduled_job('cron', hour=15, minute=20)
 async def send_daily_info():
     await client.send_message(destination_channel, daily_message)
 
