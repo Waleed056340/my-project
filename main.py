@@ -37,8 +37,8 @@ forbidden_texts = [
     "النتائج المسجلة تكون نسبة للعقد الواحد",
     "الادارة المالية اهم من معرفة كيفية الشراء والبيع",
     "القناة مجانية ولفترة محدودة",
-    "ملاحظة مهمة",
-    "القناة لا تتحمل أي مسؤولية"
+    "ملاحظة مهمة"
+    
 ]
 
 forbidden_full_block_texts = [
@@ -122,8 +122,7 @@ async def rewrite_text_with_chatgpt(text):
         if original == "القناة لا تتحمل أي مسؤولية":
             return ""
 
-        if original.startswith(("فرصة دخول كول", "فرصة دخول بوت")):
-
+        if re.search(r'^\s*\W*\s*فرص[هة]\s+دخول\s+(كول|بوت)', original):
             return REPLACEMENT_TEXT
 
         if "تم تجهيز قائمة مراقبة لعقود بوت" in original and "لا يتم التنفيذ حتى يتم التنبيه من البوت" in original:
@@ -256,14 +255,14 @@ async def forward_handler(event):
           
           final_image = add_image_watermark_to_memory(image_with_text, "watermark.png")  
           
-          await client.send_file(destination_channel, final_image, caption=caption, parse_mode='html')
+          await client.send_file(destination_channel, final_image, caption=caption)
           await client.send_message(destination_channel, "───  BOT_TOPSPX1  ───")
 
           os.remove(file_path)
 
         else:
             modified_caption = await rewrite_text_with_chatgpt(original_text)
-            await client.send_message(destination_channel, modified_caption, parse_mode='html')
+            await client.send_message(destination_channel, modified_caption)
             await client.send_message(destination_channel, "───  BOT_TOPSPX1  ───")
 
     except Exception as e:
@@ -292,7 +291,7 @@ daily_message = """(بسم الله الرحمن الرحيم)
     • ⛔ يُمنع الدخول إذا ارتفع السعر أكثر من 20 دولار عن سعر الطرح ومحاولة إسراع في الدخول عند طرح العقد
 
 استراتيجية الخروج من الصفقة:
-    • 🎯 هدفنا تحقيق ربح 60 دولار أي 15٪ إلى 20٪ لتضمن الربح وتنمي محفظتك والاستمرار بقرارك، ويتم توضيح إذا هناك فرصة قوية لعقد في ارتفاع واستمرار
+    • 🎯 هدفنا تحقيق ربح 100 دولار أي 15٪ إلى 20٪ لتضمن الربح وتنمي محفظتك والاستمرار بقرارك، ويتم توضيح إذا هناك فرصة قوية لعقد في ارتفاع واستمرار
     • عند دخولك بأكثر من عقد يُنصح بالخروج إذا تم ربح 15‎% إلى 20‎%‎ من قيمة كل عقد
 
 🎯 نظام المجموعة
@@ -327,7 +326,7 @@ daily_message = """(بسم الله الرحمن الرحيم)
 
 scheduler = AsyncIOScheduler(timezone="Asia/Riyadh")
 
-@scheduler.scheduled_job('cron', hour=3, minute=3)
+@scheduler.scheduled_job('cron', hour=3, minute=0)
 async def send_daily_info():
     await client.send_message(destination_channel, daily_message)
 
