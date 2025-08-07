@@ -10,8 +10,8 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import io
 
 openai.api_key = os.getenv("OPENAI_API_KEY").strip()
-api_id = 25671729
-api_hash = '7a99f52526cd483c1d5abf27069d5e10'
+api_id =29787903
+api_hash = '47dbcff14329cf51ae8e96d415f37732'
 
 
 source_channel = 'https://t.me/RITKCHART'
@@ -328,7 +328,7 @@ daily_message = """(بسم الله الرحمن الرحيم)
 
 scheduler = AsyncIOScheduler(timezone="Asia/Riyadh")
 
-@scheduler.scheduled_job('cron', hour=13, minute=40)
+@scheduler.scheduled_job('cron', hour=16, minute=43)
 async def send_daily_info():
     await client.send_message(destination_channel, daily_message)
 
