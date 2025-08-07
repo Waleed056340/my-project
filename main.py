@@ -14,7 +14,7 @@ api_id = 23738221
 api_hash = 'db2b1d85e692194967e53f78310e3ad1'
 
 source_channel = 'https://t.me/RITKCHART'
-destination_channel = 'https://t.me/BOT_TOPSPX0'
+destination_channel = 'https://t.me/BOT_TOPSPX2'
 
 client = TelegramClient('forwarder_session', api_id, api_hash)
 
@@ -57,16 +57,16 @@ forbidden_full_block_texts = [
 القناة لا تتحمل أي مسؤولية *"""
 ]
 
-REPLACEMENT_TEXT = """دخوووول سريع 🚀
+REPLACEMENT_TEXT = """دخوووول سريع دخووووول سريع🚀
 💸 ربح محتمل يبدأ من 100$ وأكثر
-🧠 لا تطمع…
+🧠 لا تطمع… 
 📈 ارفع وقفك دائمًا
 
 📊 تحليل فني دقيق وتنفيذ فوري
 
 ⚠ تنبيه مهم:
 📌 قرار الدخول أو الخروج مسؤوليتك الشخصية
-⛔ القناة غير مسؤولة عن أي نتائج مالية"""
+⛔ القناة غير مسؤولة عن أي نتائج مالية"""
 
 def clean_text(text):
     text = re.sub(r'\b100\$', '30$ فقط', text)
@@ -322,11 +322,12 @@ daily_message = """(بسم الله الرحمن الرحيم)
 ✨ استثمر في المعرفة، تكن الأرباح حليفك.
 
 ⚖ استراتيجية ذكية + انضباط صارم = نجاح مستدام
+
 """
 
 scheduler = AsyncIOScheduler(timezone="Asia/Riyadh")
 
-@scheduler.scheduled_job('cron', hour=3, minute=0)
+@scheduler.scheduled_job('cron', hour=13, minute=10)
 async def send_daily_info():
     await client.send_message(destination_channel, daily_message)
 
