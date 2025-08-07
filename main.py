@@ -14,8 +14,8 @@ api_id =29787903
 api_hash = '47dbcff14329cf51ae8e96d415f37732'
 
 
-source_channel = 'https://t.me/RITKCHART'
-destination_channel = 'https://t.me/BOT_TOPSPX2'
+source_channel = 'RITKCHART'
+destination_channel = 'BOT_TOPSPX2'
 
 client = TelegramClient('forwarder_session', api_id, api_hash)
 
