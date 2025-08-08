@@ -17,10 +17,7 @@ api_hash = '47dbcff14329cf51ae8e96d415f37732'
 source_channel = 'https://t.me/RITKCHART'
 destination_channel = 'https://t.me/BOT_TOPSPX2'
 
-
-string_session = os.environ.get("STRING_SESSION")
-
-client = TelegramClient(StringSession(string_session), api_id, api_hash)
+client = TelegramClient('forwarder_session', api_id, api_hash)
 
 social_media_texts = [
     "لمتابعتنا علي برامج التواصل الاجتماعي",
