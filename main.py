@@ -327,8 +327,18 @@ daily_message = """(بسم الله الرحمن الرحيم)
 """
 
 scheduler = AsyncIOScheduler(timezone="Asia/Riyadh")
+# إشعار كل ساعتين بأن البوت يعمل ويرسل لك في الخاص
+my_user_id = 8448687040  # ID حسابك الشخصي
 
-@scheduler.scheduled_job('cron', hour=13, minute=11)
+@scheduler.scheduled_job('interval', hours=30)
+async def send_bot_status():
+    try:
+        await client.send_message(my_user_id, "✅ البوت يعمل بشكل طبيعي 🚀")
+    except Exception as e:
+        print(f"❌ خطأ في إرسال إشعار حالة البوت: {e}")
+
+
+@scheduler.scheduled_job('cron', hour=16, minute=43)
 async def send_daily_info():
     await client.send_message(destination_channel, daily_message)
 
@@ -343,4 +353,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
